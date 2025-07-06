@@ -35,7 +35,7 @@ const theme = createTheme({
     },
   },
   shape: {
-    borderRadius: 16, // Rounded corners for cards/buttons
+    borderRadius: 3, // Rounded corners for cards/buttons
   },
   components: {
     MuiButton: {
