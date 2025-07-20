@@ -3,6 +3,7 @@ import { Box, Button, TextField, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import InfoCard from "../components/InfoCard";
 import { validateName, validatePassword } from "../utils/validation";
+import theme from '../styles/theme';
 
 export default function Login() {
   const [name, setName] = useState('');
@@ -49,7 +50,7 @@ export default function Login() {
       if (!res.ok) throw new Error('Login failed');
       localStorage.setItem('accessToken', data.accessToken); // Save token
       setMessage('Login successful!');
-      // ダッシュボードに遷移
+      
       navigate('/dashboard');
       
     } catch (err: unknown) {
@@ -72,7 +73,7 @@ export default function Login() {
       }}
     >
       <InfoCard>
-        <Typography variant="h5" mb={2} sx={{ textAlign: "center" }}>Login</Typography>
+        <Typography variant="h5" mb={2} sx={{ textAlign: "center", fontWeight:"bold",color: theme.palette.primary.main}}>Login</Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <TextField 
             fullWidth 

@@ -3,100 +3,113 @@ import { Box, Button, TextField, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import InfoCard from "../components/InfoCard";
 import { validateName, validatePassword } from "../utils/validation";
+import theme from "../styles/theme";
 
-export default function Signup() {
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [nameError, setNameError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
+export default function SignUp(){
+  const [name,setName] = useState("");
+  const [password,setPassword] = useState("");
+  const [message,setMessage] = useState("");
+  const [nameErr,setNameErr] = useState("");
+  const [passwordErr,setPasswordErr] = useState("");
   const navigate = useNavigate();
 
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setName(value);
-    setNameError(validateName(value));
-  };
+  const handleNameChange = (e:React.ChangeEvent<HTMLInputElement>)=>{
+    const name = e.target.value;
+    setName(name);
+    setNameErr(validateName(name));
+  }
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setPassword(value);
-    setPasswordError(validatePassword(value));
-  };
+  const handlePasswordChange = (e:React.ChangeEvent<HTMLInputElement>)=>{
+    const password = e.target.value;
+    setPassword(password);
+    setPasswordErr(validatePassword(password));
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e:React.FormEvent)=>{
     e.preventDefault();
-    setMessage('');
-    
-    // フォーム送信前にバリデーションチェック
-    const nameErr = validateName(name);
-    const passwordErr = validatePassword(password);
-    setNameError(nameErr);
-    setPasswordError(passwordErr);
-    
-    if (nameErr || passwordErr) {
-      setMessage('Please fix the validation errors above');
+    setMessage("");
+
+    const nameError = validateName(name);
+    const passwordError = validatePassword(password);
+    setNameErr(nameError);
+    setPasswordErr(passwordError);
+
+    if(nameError||passwordError){
+      setMessage("Please fix the validation errors above");
       return;
     }
-
-    try {
-      const res = await fetch('/auth/signUp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, password }),
+    
+    try{
+      const res = await fetch("/auth/signUp",{
+        method:"POST",
+        headers:{"content-type":"application/json"},
+        body:JSON.stringify({name,password})
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Signup failed');
+      
+      // レスポンスが空でないかチェック
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+      
+      if(!res.ok) {
+        const errorMessage = data.message || `HTTP ${res.status}: ${res.statusText}`;
+        throw new Error(errorMessage);
       }
-      setMessage('Signup successful! You can log in now.');
-      // サインアップ成功後にログインページに遷移
-      setTimeout(() => navigate('/login'), 1500);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
+      // サインアップ成功時はログインページに遷移
+      setMessage("signUp successful! Please log in.");
+      setTimeout(() => navigate("/login"), 2000);
+    }catch(err:unknown){
+      if(err instanceof Error){
         setMessage(err.message);
-      } else {
-        setMessage('An unexpected error occurred.');
+      }else{
+        setMessage("An unexpected error occurred!")
       }
     }
-  };
+  }
 
-  return (
+
+
+  return(
     <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: "background.default",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
+    sx={{
+      minHeight:"100vh",
+      display:"flex",
+      bgcolor:"background.default",
+      alignItems:"center",
+      justifyContent:"center"
+    }}>
       <InfoCard>
-        <Typography variant="h5" mb={2}>Sign Up</Typography>
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <TextField 
-            fullWidth 
-            label="Username" 
-            margin="normal" 
-            value={name} 
-            onChange={handleNameChange}
-            error={!!nameError}
-            helperText={nameError}
+        <Typography variant="h5" mb={2}
+        sx={{
+          textAlign:"center",
+          fontWeight:"bold",
+          color:theme.palette.primary.main
+        }}>
+          Sign Up
+        </Typography>
+        <Box component="form" onSubmit={handleSubmit} sx={{display:"flex", flexDirection: "column", gap:2}}>
+          <TextField
+          fullWidth
+          label="user name"
+          margin="normal"
+          value={name}
+          error={!!nameErr}
+          onChange={handleNameChange}
+          helperText={nameErr}
           />
-          <TextField 
-            fullWidth 
-            label="Password" 
-            margin="normal" 
-            type="password" 
-            value={password} 
-            onChange={handlePasswordChange}
-            error={!!passwordError}
-            helperText={passwordError}
+          <TextField
+          fullWidth
+          label="password"
+          margin="normal"
+          type="password"
+          value={password}
+          error={!!passwordErr}
+          onChange={handlePasswordChange}
+          helperText={passwordErr}
           />
-          {message && <Typography color={message.startsWith('Signup successful') ? 'primary' : 'error'}>{message}</Typography>}
-          <Button type="submit" fullWidth variant="contained" sx={{ mt: 1 }}>Sign Up</Button>
+          {message && <Typography color={message.startsWith("signUp successful")?'primary' : 'error'}>{message}</Typography>}
+          <Button type="submit" fullWidth variant="contained" sx={{ mt: 1 }}>sign Up</Button>
         </Box>
       </InfoCard>
     </Box>
-  );
+  )
 }
