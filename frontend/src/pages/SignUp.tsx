@@ -1,13 +1,25 @@
 import React, { useState } from 'react';
-import { Box, Button, TextField, Typography } from '@mui/material';
+import { 
+  Box, 
+  Button, 
+  TextField, 
+  Typography, 
+  FormControl, 
+  FormLabel, 
+  RadioGroup, 
+  FormControlLabel, 
+  Radio 
+} from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import InfoCard from "../components/InfoCard";
 import { validateName, validatePassword } from "../utils/validation";
 import theme from "../styles/theme";
+import { type UserRole, USER_ROLES } from "../types/auth";
 
 export default function SignUp(){
   const [name,setName] = useState("");
   const [password,setPassword] = useState("");
+  const [role,setRole] = useState<UserRole>(USER_ROLES.STUDENT); 
   const [message,setMessage] = useState("");
   const [nameErr,setNameErr] = useState("");
   const [passwordErr,setPasswordErr] = useState("");
@@ -23,6 +35,10 @@ export default function SignUp(){
     const password = e.target.value;
     setPassword(password);
     setPasswordErr(validatePassword(password));
+  }
+
+  const handleRoleChange = (e:React.ChangeEvent<HTMLInputElement>)=>{
+    setRole(e.target.value as UserRole);
   }
 
   const handleSubmit = async (e:React.FormEvent)=>{
@@ -43,10 +59,10 @@ export default function SignUp(){
       const res = await fetch("/auth/signUp",{
         method:"POST",
         headers:{"content-type":"application/json"},
-        body:JSON.stringify({name,password})
+        body:JSON.stringify({name,password,role})
       });
       
-      // レスポンスが空でないかチェック
+     
       const text = await res.text();
       const data = text ? JSON.parse(text) : {};
       
@@ -54,7 +70,7 @@ export default function SignUp(){
         const errorMessage = data.message || `HTTP ${res.status}: ${res.statusText}`;
         throw new Error(errorMessage);
       }
-      // サインアップ成功時はログインページに遷移
+     
       setMessage("signUp successful! Please log in.");
       setTimeout(() => navigate("/login"), 2000);
     }catch(err:unknown){
@@ -106,6 +122,31 @@ export default function SignUp(){
           onChange={handlePasswordChange}
           helperText={passwordErr}
           />
+          
+          {/* Role Selection */}
+          <FormControl component="fieldset" sx={{ mt: 2 }}>
+            <FormLabel component="legend" sx={{ color: theme.palette.text.primary, mb: 1 }}>
+              Account Type
+            </FormLabel>
+            <RadioGroup
+              row
+              value={role}
+              onChange={handleRoleChange}
+              sx={{ justifyContent: 'space-around' }}
+            >
+              <FormControlLabel 
+                value={USER_ROLES.STUDENT} 
+                control={<Radio color="primary" />} 
+                label="Student" 
+              />
+              <FormControlLabel 
+                value={USER_ROLES.COMPANY} 
+                control={<Radio color="primary" />} 
+                label="Company" 
+              />
+            </RadioGroup>
+          </FormControl>
+          
           {message && <Typography color={message.startsWith("signUp successful")?'primary' : 'error'}>{message}</Typography>}
           <Button type="submit" fullWidth variant="contained" sx={{ mt: 1 }}>sign Up</Button>
         </Box>

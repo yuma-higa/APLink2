@@ -1,6 +1,7 @@
 import { Controller,Body,Post, ValidationPipe, UseGuards, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { LoginDto } from './dto/login.dto';
 import { AuthGuard } from '@nestjs/passport';
 
 @Controller('auth')
@@ -13,8 +14,8 @@ signUp(@Body(ValidationPipe) createUserDto:CreateUserDto):Promise<void>{
 }
 
 @Post('signIn')
-signIn(@Body(ValidationPipe) createUserDto:CreateUserDto):Promise<{accessToken:string}>{
-    return this.auth.signIn(createUserDto);
+signIn(@Body(ValidationPipe) loginDto:LoginDto):Promise<{accessToken:string}>{
+    return this.auth.signIn(loginDto);
 }
 
 @Post('/test')

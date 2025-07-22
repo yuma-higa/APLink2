@@ -1,5 +1,10 @@
-import {MinLength,MaxLength,Matches,IsString} from 'class-validator'
+import {MinLength,MaxLength,Matches,IsString,IsEnum,IsOptional} from 'class-validator'
 
+
+export enum UserRole {
+    STUDENT = "STUDENT",
+    COMPANY = "COMPANY"
+}
 export class CreateUserDto{
     @IsString()
     @MaxLength(20,)
@@ -14,4 +19,10 @@ export class CreateUserDto{
         {message: "your password is weak"}
     )
     password:string;
+
+    @IsOptional()
+    @IsEnum(UserRole, { 
+        message: 'Role must be either STUDENT or COMPANY' 
+    })
+    role?: UserRole; 
 }
