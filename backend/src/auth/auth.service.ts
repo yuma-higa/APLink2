@@ -36,7 +36,7 @@ export class AuthService {
                 data: {
                     name,
                     password: hashedPassword,
-                    role: role || 'STUDENT',  // Default to STUDENT if not provided
+                    role: role || 'STUDENT',  
                 },
             });
         } catch (error) {
@@ -49,16 +49,25 @@ export class AuthService {
         const { name, password } = loginDto;
         const user = await this.prisma.auth.findUnique({
             where: { name },
+            include: {
+                student: true,
+                company: true
+            }
         });
+        
         if (user && (await bcrypt.compare(password, user.password))) {
-            const payload: JwtPayload = { name, role: user.role };
+            const payload: JwtPayload = { 
+                name, 
+                role: user.role,
+                userId: user.id,
+                companyId: user.company?.id,
+                studentId: user.student?.id
+            };
             const accessToken = await this.jwtService.sign(payload);
             return { accessToken };
         } else {
-
             throw new UnauthorizedException('invalid credentials, check your password and name again');
         }
-
     }
 
 }

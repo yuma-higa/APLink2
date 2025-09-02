@@ -7,6 +7,16 @@ enum UserRole {
   STUDENT
   COMPANY
 }
+
+enum ApplicationStatus {
+  APPLIED
+  REVIEWING
+  INTERVIEWING
+  OFFERED
+  REJECTED
+  HIRED
+}
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -15,10 +25,115 @@ datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
 }
-
+//auth
 model Auth {
   id String @id @default(auto()) @map("_id") @db.ObjectId
   name String @unique
   password String
   role UserRole @default(STUDENT)
+  student Student? @relation(fields:[studentId],references: [id])
+  studentId String? @db.ObjectId
+  company Company? @relation(fields:[companyId],references:[id])
+  companyId String? @db.ObjectId
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Student{
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  name String
+  email String @unique
+  major String
+  gpa Float
+  year String
+  skills String[] @default([])
+  resumePdfUrl String?
+  applications Application[]
+  messages Message[] @relation("StudentMessages")
+  auth Auth[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("students")
+}
+
+model Company {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  name String
+  email String @unique
+  description String
+  industry String
+  location String
+  website String?
+  logoUrl String?
+  
+  // Relations
+  jobs Job[]
+  applications Application[]
+  messages Message[] @relation("CompanyMessages")
+  auth Auth[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("companies")
+}
+
+
+model Job {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  title String
+  description String
+  requirements String[]
+  salary String?
+  location String
+  type String // Full-time, Part-time, Internship
+  isActive Boolean @default(true)
+  
+  // Relations
+  company Company @relation(fields: [companyId], references: [id])
+  companyId String @db.ObjectId
+  applications Application[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("jobs")
+}
+
+model Application {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  status ApplicationStatus @default(APPLIED)
+  coverLetter String?
+  notes String?
+  
+  // Relations
+  student Student @relation(fields: [studentId], references: [id])
+  studentId String @db.ObjectId
+  company Company @relation(fields: [companyId], references: [id])
+  companyId String @db.ObjectId
+  job Job @relation(fields: [jobId], references: [id])
+  jobId String @db.ObjectId
+  
+  appliedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("applications")
+}
+
+model Message {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  content String
+  isRead Boolean @default(false)
+  
+  // Relations
+  student Student @relation("StudentMessages", fields: [studentId], references: [id])
+  studentId String @db.ObjectId
+  company Company @relation("CompanyMessages", fields: [companyId], references: [id])
+  companyId String @db.ObjectId
+  
+  sentAt DateTime @default(now())
+  
+  @@map("messages")
 }

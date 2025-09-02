@@ -1,26 +1,9 @@
 import React from 'react';
 import { Box, Typography, AppBar, Toolbar, Button, Container, Card, CardContent, Grid } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { logout, decodeToken } from '../utils/auth';
+import { useAuth } from '../hooks/useAuth';
 
 const StudentPage: React.FC = () => {
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
-  // 現在のユーザー情報を取得
-  const getCurrentUser = () => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      return decodeToken(token);
-    }
-    return null;
-  };
-
-  const user = getCurrentUser();
+  const { handleLogout, user } = useAuth();
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
@@ -32,7 +15,7 @@ const StudentPage: React.FC = () => {
           </Typography>
           {user && (
             <Typography variant="body2" sx={{ mr: 2 }}>
-              ようこそ、{user.name}さん
+              ようこそ、{user}さん
             </Typography>
           )}
           <Button color="inherit" onClick={handleLogout}>

@@ -25,13 +25,13 @@ export const decodeToken = (token: string): {name: string; role: UserRole} | nul
 
         const decoded = JSON.parse(base64UrlDecode(payload));
         
-        // JWTの有効期限をチェック
+        
         if (decoded.exp && decoded.exp * 1000 < Date.now()) {
             console.warn("Token has expired");
             return null;
         }
         
-        // 必要なフィールドの存在チェック
+        
         if (!decoded.name || !decoded.role) {
             console.warn("Token missing required fields");
             return null;
@@ -53,7 +53,7 @@ export const getUserRole = (): UserRole | null => {
   
   const decoded = decodeToken(token);
   if (!decoded) {
-    // 無効なトークンの場合は削除
+    
     localStorage.removeItem('accessToken');
     return null;
   }
@@ -69,10 +69,10 @@ export const isAuthenticated = (): boolean => {
   const token = localStorage.getItem('accessToken');
   if (!token) return false;
   
-  // トークンの有効性も確認
+ 
   const decoded = decodeToken(token);
   if (!decoded) {
-    // 無効なトークンの場合は削除
+    
     localStorage.removeItem('accessToken');
     return false;
   }

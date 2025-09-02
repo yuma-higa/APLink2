@@ -12,12 +12,12 @@ interface RoleGuardProps {
 export default function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
   const userRole = getUserRole();
 
-  // ユーザーロールが取得できない場合（無効なトークンなど）
+
   if (!userRole) {
     return <Navigate to="/login" replace />;
   }
 
-  // ユーザーロールが許可されたロールに含まれていない場合
+
   if (!allowedRoles.includes(userRole)) {
     return (
       <Box

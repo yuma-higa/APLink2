@@ -31,7 +31,7 @@ export default function Login() {
     e.preventDefault();
     setMessage('');
     
-    // フォーム送信前にバリデーションチェック
+    
     const nameErr = validateName(name);
     const passwordErr = validatePassword(password);
     setNameError(nameErr);
@@ -51,21 +51,20 @@ export default function Login() {
       const data = await res.json();
       if (!res.ok) throw new Error('Login failed');
       
-      // トークンを保存
+     
       localStorage.setItem('accessToken', data.accessToken);
-      
-      // トークンからユーザー情報を取得してロールに応じてリダイレクト
+
       const userInfo = decodeToken(data.accessToken);
       if (userInfo) {
         setMessage('Login successful!');
         
-        // ロールに応じてリダイレクト
+     
         if (userInfo.role === USER_ROLES.STUDENT) {
           navigate('/student');
         } else if (userInfo.role === USER_ROLES.COMPANY) {
           navigate('/company');
         } else {
-          // フォールバック（予期しないロールの場合）
+          
           navigate('/dashboard');
         }
       } else {
@@ -116,17 +115,17 @@ export default function Login() {
           {message && <Typography color={message.startsWith('Login successful') ? 'primary' : 'error'}>{message}</Typography>}
           <Button type="submit" fullWidth variant="contained" sx={{ mt: 1 }}>Login</Button>
           
-          {/* サインアップページへのリンク */}
+     
           <Box sx={{ mt: 2, textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              アカウントをお持ちでないですか？{' '}
+              don't you have an account?{' '}
               <Button 
                 variant="text" 
                 size="small" 
                 onClick={() => navigate('/signup')}
                 sx={{ textTransform: 'none' }}
               >
-                サインアップ
+                sign Up
               </Button>
             </Typography>
           </Box>
