@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@ne
 import { AuthGuard } from '@nestjs/passport';
 import { CompanyService } from './company.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
+import { UpdateCompanyProfileDto } from './dto/update-company-profile.dto';
 
 @Controller('company')
 @UseGuards(AuthGuard('jwt'))
@@ -110,5 +111,39 @@ export class CompanyController {
   ) {
     const companyId = req.user.companyId;
     return this.companyService.sendMessage(companyId, body);
+  }
+
+  // Profile management
+  @Get('profile')
+  async getProfile(@Request() req) {
+    try {
+      let companyId = req.user.companyId;
+      
+      if (!companyId && req.user.role === 'COMPANY') {
+        companyId = await this.companyService.getOrCreateCompanyProfile(req.user);
+      }
+      
+      return this.companyService.getProfile(companyId);
+    } catch (error) {
+      console.error('Error in getProfile:', error);
+      throw error;
+    }
+  }
+
+  @Put('profile')
+  async updateProfile(@Request() req, @Body() updateData: UpdateCompanyProfileDto) {
+    try {
+      let companyId = req.user.companyId;
+      
+      if (!companyId && req.user.role === 'COMPANY') {
+        companyId = await this.companyService.getOrCreateCompanyProfile(req.user);
+      }
+      
+      console.log('Updating profile for companyId:', companyId, 'with data:', updateData);
+      return this.companyService.updateProfile(companyId, updateData);
+    } catch (error) {
+      console.error('Error in updateProfile:', error);
+      throw error;
+    }
   }
 }

@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import StudentPage from "./pages/StudentPage";
 import CompanyPage from "./pages/Company/CompanyPage";
 import CompanyProfile from "./pages/Company/CompanyProfile";
+import CompanyProfileEdit from "./pages/Company/CompanyProfileEdit";
 import RequireAuth from "./components/RequireAuth";
 import RoleGuard from "./components/RoleGuard";
 import { USER_ROLES } from "./types/auth";
@@ -41,11 +42,23 @@ function App() {
 
         {/* 企業プロフィールページ */}
         <Route
-          path="/company/profile"
+          path="/company/Dashboard"
           element={
             <RequireAuth>
               <RoleGuard allowedRoles={[USER_ROLES.COMPANY]}>
                 <CompanyProfile />
+              </RoleGuard>
+            </RequireAuth>
+          }
+        />
+
+        {/* 企業プロフィール編集ページ */}
+        <Route
+          path="/company/profile/edit"
+          element={
+            <RequireAuth>
+              <RoleGuard allowedRoles={[USER_ROLES.COMPANY]}>
+                <CompanyProfileEdit />
               </RoleGuard>
             </RequireAuth>
           }

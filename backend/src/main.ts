@@ -11,7 +11,12 @@ async function bootstrap() {
     origin: 'http://localhost:5173', // Allow requests from Vite dev server
     credentials: true,
   });
-  app.useGlobalPipes(new ValidationPipe());
+  // Enable transformation so DTO @Transform decorators apply
+  // Also whitelist to strip unknown fields from payloads
+  app.useGlobalPipes(new ValidationPipe({
+    transform: true,
+    whitelist: true,
+  }));
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

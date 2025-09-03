@@ -2,7 +2,7 @@ import { IsString } from 'class-validator';
 
 export class SendMessageDto {
   @IsString()
-  studentId: string;
+  companyId: string;
 
   @IsString()
   content: string;

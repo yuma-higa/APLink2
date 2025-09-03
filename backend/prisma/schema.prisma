@@ -49,9 +49,19 @@ model Student{
   year String
   skills String[] @default([])
   resumePdfUrl String?
+  bio String?
+  linkedin String?
+  github String?
+  phone String?
+  profileImageUrl String?
+  
+  // Relations
   applications Application[]
   messages Message[] @relation("StudentMessages")
+  interviews Interview[] @relation("StudentInterviews")
+  profileViews ProfileView[]
   auth Auth[]
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
@@ -67,11 +77,15 @@ model Company {
   location String
   website String?
   logoUrl String?
+  size String? // Startup, Small, Medium, Large
+  foundedYear Int?
   
   // Relations
   jobs Job[]
   applications Application[]
   messages Message[] @relation("CompanyMessages")
+  interviews Interview[] @relation("CompanyInterviews")
+  profileViews ProfileView[]
   auth Auth[]
   
   createdAt DateTime @default(now())
@@ -115,6 +129,7 @@ model Application {
   companyId String @db.ObjectId
   job Job @relation(fields: [jobId], references: [id])
   jobId String @db.ObjectId
+  interviews Interview[]
   
   appliedAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -136,4 +151,46 @@ model Message {
   sentAt DateTime @default(now())
   
   @@map("messages")
+}
+
+model Interview {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  title String
+  description String?
+  scheduledAt DateTime
+  duration Int // in minutes
+  meetingLink String?
+  status String @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED, RESCHEDULED
+  notes String?
+  
+  // Relations
+  student Student @relation("StudentInterviews", fields: [studentId], references: [id])
+  studentId String @db.ObjectId
+  company Company @relation("CompanyInterviews", fields: [companyId], references: [id])
+  companyId String @db.ObjectId
+  application Application @relation(fields: [applicationId], references: [id])
+  applicationId String @db.ObjectId
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("interviews")
+}
+
+model ProfileView {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Relations - either a student views a company or vice versa
+  student Student? @relation(fields: [studentId], references: [id])
+  studentId String? @db.ObjectId
+  company Company? @relation(fields: [companyId], references: [id])
+  companyId String? @db.ObjectId
+  
+  // Who is being viewed
+  viewedStudentId String? @db.ObjectId
+  viewedCompanyId String? @db.ObjectId
+  
+  viewedAt DateTime @default(now())
+  
+  @@map("profile_views")
 }

@@ -12,7 +12,6 @@ interface HeaderProps {
 }
 
 const drawerWidth = 240;
-const navItems = ['Home', 'Profile', 'Contact', 'logout'];
 
 const Header: React.FC<HeaderProps> = ({ userName: propUserName, userRole: propUserRole }) => {
   const navigate = useNavigate();
@@ -22,6 +21,17 @@ const Header: React.FC<HeaderProps> = ({ userName: propUserName, userRole: propU
   const userRole = propUserRole || getUserRole() || 'STUDENT';
   const userName = propUserName || user || 'guest';
 
+  // Define navigation items based on user role
+  const getNavItems = () => {
+    if (userRole === 'COMPANY') {
+      return ['Home', 'Dashboard', 'Profile', 'logout'];
+    } else {
+      return ['Dashboard', 'Profile', 'logout'];
+    }
+  };
+
+  const navItems = getNavItems();
+
 
 
   const handleNavigation = (item: string) => {
@@ -29,11 +39,26 @@ const Header: React.FC<HeaderProps> = ({ userName: propUserName, userRole: propU
       case "logout":
         handleLogout();
         break;
+      case "Home":
+        if (userRole === 'COMPANY') {
+          navigate('/company');
+        } else {
+          navigate('/student');
+        }
+        break;
+      // case "Dashboard":
+      //   navigate('/student');
+      //   break;
+      case "Dashboard":
+        if (userRole === 'COMPANY') {
+          navigate('/company/Dashboard');
+        } else {
+          navigate('/student');
+        }
+        break;
       case "Profile":
         if (userRole === 'COMPANY') {
-          navigate('/company/profile');
-        } else {
-          navigate('/student/profile'); // 将来的に学生プロフィールページを作る場合
+          navigate('/company/profile/edit');
         }
         break;
       default:

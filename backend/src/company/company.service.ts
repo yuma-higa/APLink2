@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
+import { FilterStudentsDto } from './dto/filter-students.dto';
+import { CreateInterviewDto } from './dto/create-interview.dto';
+import { UpdateApplicationStatusDto } from './dto/update-application-status.dto';
+import { UpdateCompanyProfileDto } from './dto/update-company-profile.dto';
+import { SendMessageDto } from './dto/send-message.dto';
 
 @Injectable()
 export class CompanyService {
@@ -107,33 +112,7 @@ export class CompanyService {
     }
   }
 
-  async getMessages(companyId: string) {
-    try {
-      if (!companyId) {
-        console.log('No companyId provided for messages');
-        return [];
-      }
-
-      const messages = await this.prisma.message.findMany({
-        where: { companyId },
-        include: {
-          student: true
-        },
-        orderBy: { sentAt: 'desc' }
-      });
-
-      return messages.map(msg => ({
-        id: msg.id,
-        studentName: msg.student?.name || 'Unknown Student',
-        content: msg.content,
-        sentAt: msg.sentAt,
-        isRead: msg.isRead
-      }));
-    } catch (error) {
-      console.error('Error in getMessages:', error);
-      return [];
-    }
-  }
+  // Removed duplicate getMessages method to resolve duplicate implementation error.
 
   // Application management
   async createApplication(createApplicationDto: CreateApplicationDto) {
@@ -199,41 +178,8 @@ export class CompanyService {
     }
   }
 
-  async updateProfile(companyId: string, updateData: any) {
-    try {
-      return await this.prisma.company.update({
-        where: { id: companyId },
-        data: {
-          ...updateData,
-          updatedAt: new Date()
-        }
-      });
-    } catch (error) {
-      console.error('Error updating company profile:', error);
-      throw error;
-    }
-  }
-
   // Messaging
-  async sendMessage(companyId: string, messageData: any) {
-    try {
-      return await this.prisma.message.create({
-        data: {
-          companyId,
-          studentId: messageData.studentId,
-          content: messageData.content,
-          sentAt: new Date()
-        },
-        include: {
-          student: true,
-          company: true
-        }
-      });
-    } catch (error) {
-      console.error('Error sending message:', error);
-      throw error;
-    }
-  }
+  // Removed duplicate sendMessage method to resolve duplicate implementation error.
 
   // Helper methods
   private getEmptyChartData() {
@@ -333,5 +279,266 @@ export class CompanyService {
         ]
       }
     };
+  }
+
+  // Student discovery and filtering
+  async searchStudents(companyId: string, filters: FilterStudentsDto) {
+    const where: any = {};
+
+    if (filters.search) {
+      where.OR = [
+        { name: { contains: filters.search, mode: 'insensitive' } },
+        { email: { contains: filters.search, mode: 'insensitive' } }
+      ];
+    }
+
+    if (filters.major) {
+      where.major = { contains: filters.major, mode: 'insensitive' };
+    }
+
+    if (filters.year) {
+      where.year = filters.year;
+    }
+
+    if (filters.skills) {
+      where.skills = {
+        hasSome: [filters.skills]
+      };
+    }
+
+    if (filters.minGpa) {
+      where.gpa = {
+        gte: parseFloat(filters.minGpa)
+      };
+    }
+
+    const students = await this.prisma.student.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        major: true,
+        year: true,
+        gpa: true,
+        skills: true,
+        bio: true,
+        linkedin: true,
+        github: true,
+        profileImageUrl: true,
+        applications: {
+          where: { companyId },
+          select: {
+            id: true,
+            status: true,
+            appliedAt: true,
+            job: {
+              select: {
+                title: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return students.map(student => ({
+      ...student,
+      hasApplied: student.applications.length > 0,
+      applicationHistory: student.applications
+    }));
+  }
+
+  // Application management for companies
+  // Removed duplicate updateApplicationStatus method to resolve duplicate implementation error.
+
+  async getApplicationDetails(companyId: string, applicationId: string) {
+    const application = await this.prisma.application.findFirst({
+      where: {
+        id: applicationId,
+        companyId
+      },
+      include: {
+        student: true,
+        job: true,
+        interviews: {
+          orderBy: { scheduledAt: 'asc' }
+        }
+      }
+    });
+
+    if (!application) {
+      throw new Error('Application not found or access denied');
+    }
+
+    return application;
+  }
+
+  // Interview management
+  async createInterview(companyId: string, interviewData: CreateInterviewDto) {
+    const application = await this.prisma.application.findFirst({
+      where: {
+        id: interviewData.applicationId,
+        companyId
+      }
+    });
+
+    if (!application) {
+      throw new Error('Application not found or access denied');
+    }
+
+    const interview = await this.prisma.interview.create({
+      data: {
+        title: interviewData.title,
+        description: interviewData.description,
+        scheduledAt: new Date(interviewData.scheduledAt),
+        duration: interviewData.duration,
+        meetingLink: interviewData.meetingLink,
+        studentId: application.studentId,
+        companyId,
+        applicationId: interviewData.applicationId
+      },
+      include: {
+        student: true,
+        application: {
+          include: {
+            job: true
+          }
+        }
+      }
+    });
+
+    return interview;
+  }
+
+  async getInterviews(companyId: string, upcoming: boolean = false) {
+    const where: any = { companyId };
+    
+    if (upcoming) {
+      where.scheduledAt = { gte: new Date() };
+      where.status = 'SCHEDULED';
+    }
+
+    const interviews = await this.prisma.interview.findMany({
+      where,
+      include: {
+        student: true,
+        application: {
+          include: {
+            job: true
+          }
+        }
+      },
+      orderBy: { scheduledAt: upcoming ? 'asc' : 'desc' }
+    });
+
+    return interviews;
+  }
+
+  // Messaging
+  async sendMessage(companyId: string, messageData: SendMessageDto) {
+    const message = await this.prisma.message.create({
+      data: {
+        companyId,
+        studentId: messageData.studentId,
+        content: messageData.content
+      },
+      include: {
+        student: true
+      }
+    });
+
+    return message;
+  }
+
+  async getMessages(companyId: string, studentId?: string) {
+    const where: any = { companyId };
+    
+    if (studentId) {
+      where.studentId = studentId;
+    }
+
+    const messages = await this.prisma.message.findMany({
+      where,
+      include: {
+        student: true
+      },
+      orderBy: { sentAt: 'desc' }
+    });
+
+    return messages;
+  }
+
+  // Profile views analytics
+  async getProfileViewAnalytics(companyId: string, days: number = 30) {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const views = await this.prisma.profileView.findMany({
+      where: {
+        viewedCompanyId: companyId,
+        viewedAt: {
+          gte: startDate
+        }
+      },
+      include: {
+        student: true
+      },
+      orderBy: { viewedAt: 'desc' }
+    });
+
+    const viewsByDate = {};
+    views.forEach(view => {
+      const date = view.viewedAt.toISOString().split('T')[0];
+      if (!viewsByDate[date]) {
+        viewsByDate[date] = 0;
+      }
+      viewsByDate[date]++;
+    });
+
+    return {
+      totalViews: views.length,
+      uniqueViewers: new Set(views.map(v => v.studentId)).size,
+      viewsByDate,
+      recentViewers: views.slice(0, 10)
+    };
+  }
+
+  // Company profile management
+
+  async updateProfile(companyId: string, updateData: UpdateCompanyProfileDto) {
+    try {
+      console.log('Updating company profile:', { companyId, updateData });
+      
+      // Validate that the company exists
+      const existingCompany = await this.prisma.company.findUnique({
+        where: { id: companyId }
+      });
+      
+      if (!existingCompany) {
+        throw new Error(`Company with ID ${companyId} not found`);
+      }
+      
+      // Update the company profile
+      const updatedCompany = await this.prisma.company.update({
+        where: { id: companyId },
+        data: updateData
+      });
+
+      console.log('Company profile updated successfully:', updatedCompany);
+      return updatedCompany;
+    } catch (error) {
+      console.error('Error updating company profile:', error);
+      throw error;
+    }
+  }
+
+  // Keep the old method names for backward compatibility
+  async getCompanyProfile(companyId: string) {
+    return this.getProfile(companyId);
+  }
+
+  async updateCompanyProfile(companyId: string, updateData: UpdateCompanyProfileDto) {
+    return this.updateProfile(companyId, updateData);
   }
 }
