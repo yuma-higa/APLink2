@@ -170,6 +170,16 @@ export class CompanyController {
     return this.companyService.createInterview(companyId, body as any);
   }
 
+  // Propose time (pending until student accepts)
+  @Post('interviews/propose')
+  async proposeInterview(@Request() req, @Body() body: { applicationId: string; title: string; description?: string; scheduledAt: string; duration?: number; meetingLink?: string }) {
+    let companyId = req.user.companyId;
+    if (!companyId && req.user.role === 'COMPANY') {
+      companyId = await this.companyService.getOrCreateCompanyProfile(req.user);
+    }
+    return this.companyService.proposeInterview(companyId, body as any);
+  }
+
   // Profile views analytics (weekly visitors)
   @Get('analytics/views')
   async getViewsAnalytics(@Request() req) {

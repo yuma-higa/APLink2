@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Container, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button, Chip, Stack } from '@mui/material';
+import { Box, Container, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button, Chip, Stack, Autocomplete } from '@mui/material';
 import Header from "../../layouts/Header";
 import { useAuth } from '../../hooks/useAuth';
 import { companyApiService } from '../../services/companyApi';
 import StudentCard from '../../components/Company/StudentCard';
 import { useNavigate } from 'react-router-dom';
+import { MAJORS } from '../../constants/majors';
 import type { StudentSummary } from '../../types/student';
 
 const CompanyPage: React.FC = () => {
@@ -59,12 +60,16 @@ const CompanyPage: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <TextField
+          <Autocomplete
             size="small"
-            label="Major"
-            placeholder="e.g. Computer Science"
+            freeSolo
+            options={MAJORS}
             value={major}
-            onChange={(e) => setMajor(e.target.value)}
+            onInputChange={(_, v) => setMajor(v)}
+            sx={{ minWidth: 240 }}
+            renderInput={(params) => (
+              <TextField {...params} label="Major (optional)" placeholder="Start typing to search majors" />
+            )}
           />
         </Box>
 

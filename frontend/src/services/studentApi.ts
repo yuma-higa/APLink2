@@ -18,12 +18,17 @@ class StudentApiService {
 
   private async handleResponse(response: Response) {
     if (!response.ok) {
+      let msg = `API Error: ${response.status}`;
+      try {
+        const data = await response.json();
+        if (data?.message) msg = Array.isArray(data.message) ? data.message.join(', ') : data.message;
+      } catch {}
       if (response.status === 401) {
         localStorage.removeItem('accessToken');
         window.location.href = '/login';
         throw new Error('Unauthorized');
       }
-      throw new Error(`API Error: ${response.status}`);
+      throw new Error(msg);
     }
     return response.json();
   }
@@ -118,6 +123,16 @@ class StudentApiService {
   // Interviews
   async getUpcomingInterviews() {
     const res = await fetch(`${API_BASE_URL}/student/interviews/upcoming`, { headers: this.getAuthHeaders() });
+    return this.handleResponse(res);
+  }
+
+  async getPendingInterviews() {
+    const res = await fetch(`${API_BASE_URL}/student/interviews/pending`, { headers: this.getAuthHeaders() });
+    return this.handleResponse(res);
+  }
+
+  async acceptInterview(id: string) {
+    const res = await fetch(`${API_BASE_URL}/student/interviews/${id}/accept`, { method: 'POST', headers: this.getAuthHeaders() });
     return this.handleResponse(res);
   }
 

@@ -21,9 +21,10 @@ interface Props {
   jobs?: Array<{ id: string; title: string; type: string; location: string }>;
   onApply?: (companyId: string, jobId: string) => void;
   applyDisabled?: boolean;
+  disabledJobIds?: string[];
 }
 
-const CompanyCard: React.FC<Props> = ({ company, jobs, onApply, applyDisabled }) => {
+const CompanyCard: React.FC<Props> = ({ company, jobs, onApply, applyDisabled, disabledJobIds }) => {
   const initials = company.name?.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
 
   return (
@@ -54,7 +55,7 @@ const CompanyCard: React.FC<Props> = ({ company, jobs, onApply, applyDisabled })
                   <Typography variant="caption" color="text.secondary">{job.type} • {job.location}</Typography>
                 </Box>
                 {onApply && (
-                  <Button size="small" variant="outlined" disabled={applyDisabled} onClick={() => onApply(company.id, job.id)}>Apply</Button>
+                  <Button size="small" variant="outlined" disabled={applyDisabled || (disabledJobIds?.includes(job.id) ?? false)} onClick={() => onApply(company.id, job.id)}>Apply</Button>
                 )}
               </Box>
             ))}

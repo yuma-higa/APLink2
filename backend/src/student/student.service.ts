@@ -415,6 +415,34 @@ export class StudentService {
     return interviews;
   }
 
+  // Pending interview proposals for the student
+  async getPendingInterviews(studentId: string) {
+    return this.prisma.interview.findMany({
+      where: { studentId, status: 'PENDING' },
+      include: {
+        company: { select: { id: true, name: true, logoUrl: true } },
+        application: { include: { job: { select: { id: true, title: true } } } },
+      },
+      orderBy: { scheduledAt: 'asc' },
+    });
+  }
+
+  // Student accepts a proposed interview time
+  async acceptInterview(studentId: string, interviewId: string) {
+    const interview = await this.prisma.interview.findFirst({
+      where: { id: interviewId, studentId },
+      include: { company: true, application: { include: { job: true } } },
+    });
+    if (!interview) throw new NotFoundException('Interview not found');
+    if (interview.status !== 'PENDING') throw new BadRequestException('Interview is not pending');
+
+    return this.prisma.interview.update({
+      where: { id: interviewId },
+      data: { status: 'SCHEDULED' },
+      include: { company: true, application: { include: { job: true } } },
+    });
+  }
+
   // Profile views tracking
   private async trackProfileView(studentId: string, companyId: string) {
     // Check if view already exists today

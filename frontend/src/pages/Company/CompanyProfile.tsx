@@ -212,7 +212,8 @@ const CompanyProfile: React.FC = () => {
           {chartData && (
             <StatsSection 
               applicationData={chartData.applicationData} 
-              hiringData={chartData.hiringData} 
+              hiringData={chartData.hiringData}
+              summary={(chartData as any).summary}
             />
           )}
           {viewsData && (

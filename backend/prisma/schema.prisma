@@ -49,7 +49,7 @@ model Student{
   id String @id @default(auto()) @map("_id") @db.ObjectId
   name String
   email String @unique
-  major String
+  major String?
   gpa Float
   year String
   skills String[] @default([])

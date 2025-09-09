@@ -31,8 +31,12 @@ const CompanyDetail: React.FC = () => {
 
   const handleApply = async (jobId: string) => {
     if (!id) return;
-    await studentApi.createApplication({ companyId: id, jobId, coverLetter });
-    navigate('/student/applications');
+    try {
+      await studentApi.createApplication({ companyId: id, jobId, coverLetter });
+      navigate('/student/applications');
+    } catch (e: any) {
+      alert(e?.message || 'Failed to apply. You may have already applied.');
+    }
   };
 
   return (
@@ -49,7 +53,9 @@ const CompanyDetail: React.FC = () => {
 
             <Typography variant="h6" sx={{ mb: 1 }}>Open Positions</Typography>
             <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
-              {(company.jobs || []).map((job: any) => (
+              {(company.jobs || []).map((job: any) => {
+                const existing = (company.myApplications || []).find((a: any) => a.job?.id === job.id);
+                return (
                 <Box key={job.id}>
                   <Card>
                     <CardContent>
@@ -57,12 +63,14 @@ const CompanyDetail: React.FC = () => {
                       <Typography variant="body2" color="text.secondary">{job.type} • {job.location}</Typography>
                       <TextField fullWidth multiline minRows={2} sx={{ mt: 2 }} placeholder="Cover letter (optional)" value={coverLetter} onChange={e => setCoverLetter(e.target.value)} />
                       <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                        <Button onClick={() => handleApply(job.id)} variant="contained">Apply</Button>
+                        <Button onClick={() => handleApply(job.id)} variant="contained" disabled={!!existing}>
+                          {existing ? 'Already Applied' : 'Apply'}
+                        </Button>
                       </Box>
                     </CardContent>
                   </Card>
                 </Box>
-              ))}
+              );})}
               {(!company.jobs || company.jobs.length === 0) && (
                 <Box><Typography variant="body2" color="text.secondary">No active jobs.</Typography></Box>
               )}

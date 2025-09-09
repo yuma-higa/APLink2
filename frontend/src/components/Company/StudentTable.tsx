@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Box,
   Card,
@@ -24,7 +24,10 @@ import {
   Toolbar,
   TextField,
   Stack,
+  DialogContentText,
+  Grid,
 } from '@mui/material';
+import { Event as EventIcon, AccessTime as AccessTimeIcon, Timer as TimerIcon, Title as TitleIcon, Description as DescriptionIcon, CheckCircleOutline, CancelOutlined, InfoOutlined } from '@mui/icons-material';
 import { Edit, Visibility, Email } from '@mui/icons-material';
 import Avatar from '@mui/material/Avatar';
 import type { Student } from '../../types/dashboard';
@@ -49,6 +52,18 @@ const StudentTable: React.FC<StudentTableProps> = ({
   const [newStatus, setNewStatus] = useState<Student['status']>('Applied');
   const [statusFilter, setStatusFilter] = useState<'' | Student['status']>('');
   const [query, setQuery] = useState('');
+  const [scheduleDialog, setScheduleDialog] = useState<{ open: boolean; applicationId?: number }>({ open: false });
+  const [scheduleDate, setScheduleDate] = useState<string>('');
+  const [scheduleTime, setScheduleTime] = useState<string>('09:00');
+  const [duration, setDuration] = useState<number>(30);
+  const [title, setTitle] = useState<string>('Interview');
+  const [description, setDescription] = useState<string>('');
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  const hiddenDateInputRef = useRef<HTMLInputElement>(null);
+
+  const isValidTime = (v: string) => /^\d{2}:\d{2}$/.test(v);
+  const canPropose = !!scheduleDialog.applicationId && !!scheduleDate && isValidTime(scheduleTime) && duration > 0 && !!title.trim();
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { Applied: 0, Interviewing: 0, Offered: 0, Hired: 0, Rejected: 0 };
@@ -165,7 +180,7 @@ const StudentTable: React.FC<StudentTableProps> = ({
                         {student.appliedDate}
                       </Typography>
                     </TableCell>
-                    <TableCell>
+                  <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
                         <IconButton 
                           size="small" 
@@ -188,6 +203,9 @@ const StudentTable: React.FC<StudentTableProps> = ({
                         >
                           <Email fontSize="small" />
                         </IconButton>
+                        <Button size="small" variant="outlined" onClick={() => setScheduleDialog({ open: true, applicationId: student.id })}>
+                          Schedule
+                        </Button>
                       </Box>
                     </TableCell>
                   </TableRow>
@@ -228,6 +246,127 @@ const StudentTable: React.FC<StudentTableProps> = ({
           </Button>
           <Button onClick={handleSaveStatus} variant="contained">
             Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Schedule Interview Dialog */}
+      <Dialog open={scheduleDialog.open} onClose={() => setScheduleDialog({ open: false })} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Stack spacing={0.5}>
+            <Typography variant="h6">Propose Interview Time</Typography>
+            <Typography variant="body2" color="text.secondary">Pick a date/time to propose to the student. They will confirm on their side.</Typography>
+          </Stack>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              {(() => {
+                const hiddenRef = hiddenDateInputRef;
+                const display = scheduleDate
+                  ? new Date(`${scheduleDate}T00:00:00`).toLocaleDateString('en-CA')
+                  : '';
+                return (
+                  <Box sx={{ position: 'relative' }}>
+                    <TextField
+                      label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><EventIcon fontSize="small" /> Date</Box>}
+                      value={display}
+                      placeholder="YYYY-MM-DD"
+                      onClick={() => hiddenRef.current?.showPicker ? hiddenRef.current.showPicker() : hiddenRef.current?.click()}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hiddenRef.current?.click(); } }}
+                      fullWidth
+                      InputProps={{ readOnly: true }}
+                      helperText={' '}
+                    />
+                    <input
+                      ref={hiddenRef}
+                      type="date"
+                      lang="en"
+                      value={scheduleDate}
+                      onChange={(e) => setScheduleDate(e.target.value)}
+                      style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
+                    />
+                  </Box>
+                );
+              })()}
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><AccessTimeIcon fontSize="small" /> Time</Box>}
+                type="time"
+                value={scheduleTime}
+                onChange={e => setScheduleTime(e.target.value)}
+                error={!!scheduleTime && !isValidTime(scheduleTime)}
+                helperText={!!scheduleTime && !isValidTime(scheduleTime) ? 'Use HH:MM (24h)' : ' '}
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TimerIcon fontSize="small" /> Duration (minutes)</Box>}
+                type="number"
+                value={duration}
+                onChange={e => setDuration(parseInt(e.target.value || '30', 10))}
+                fullWidth
+                inputProps={{ min: 5, step: 5 }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TitleIcon fontSize="small" /> Title</Box>}
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><DescriptionIcon fontSize="small" /> Description</Box>}
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                fullWidth
+                multiline rows={2}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary' }}>
+                <InfoOutlined fontSize="small" />
+                <Typography variant="caption">All times shown in your timezone:</Typography>
+                <Typography variant="caption" fontWeight={600}>{tz}</Typography>
+              </Stack>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button startIcon={<CancelOutlined />} onClick={() => setScheduleDialog({ open: false })}>Cancel</Button>
+          <Button
+            startIcon={<CheckCircleOutline />}
+            variant="contained"
+            disabled={!canPropose}
+            onClick={async () => {
+              if (!scheduleDialog.applicationId) return;
+              const iso = new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString();
+              try {
+                const mod = await import('../../services/companyApi');
+                await mod.companyApiService.proposeInterview({
+                  applicationId: String(scheduleDialog.applicationId),
+                  title: title.trim(),
+                  description,
+                  scheduledAt: iso,
+                  duration,
+                });
+              } finally {
+                setScheduleDialog({ open: false });
+                setScheduleDate('');
+                setScheduleTime('09:00');
+                setDuration(30);
+                setTitle('Interview');
+                setDescription('');
+              }
+            }}
+          >
+            Propose
           </Button>
         </DialogActions>
       </Dialog>

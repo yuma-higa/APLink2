@@ -121,6 +121,18 @@ export class StudentController {
     return this.studentService.getUpcomingInterviews(studentId);
   }
 
+  @Get('interviews/pending')
+  async getPendingInterviews(@Request() req) {
+    const studentId = await this.studentService.getOrCreateStudentProfile(req.user);
+    return this.studentService.getPendingInterviews(studentId);
+  }
+
+  @Post('interviews/:id/accept')
+  async acceptInterview(@Request() req, @Param('id') id: string) {
+    const studentId = await this.studentService.getOrCreateStudentProfile(req.user);
+    return this.studentService.acceptInterview(studentId, id);
+  }
+
   @Get('interviews/history')
   async getInterviewHistory(@Request() req) {
     const studentId = await this.studentService.getOrCreateStudentProfile(req.user);

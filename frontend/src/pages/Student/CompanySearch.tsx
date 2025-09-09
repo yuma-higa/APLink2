@@ -19,6 +19,7 @@ const CompanySearch: React.FC = () => {
   const [jobType, setJobType] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [disabledJobIds, setDisabledJobIds] = useState<string[]>([]);
   const [toast, setToast] = useState<{ open: boolean; msg: string; type: 'success' | 'error' }>(() => ({ open: false, msg: '', type: 'success' }));
   const navigate = useNavigate();
 
@@ -77,6 +78,7 @@ const CompanySearch: React.FC = () => {
                 company={c}
                 jobs={Array.isArray(c.jobs) ? c.jobs.map((j: any) => ({ id: j.id, title: j.title, type: j.type, location: j.location })) : []}
                 applyDisabled={submitting}
+                disabledJobIds={disabledJobIds}
                 onApply={async (companyId, jobId) => {
                   try {
                     setSubmitting(true);
@@ -85,10 +87,15 @@ const CompanySearch: React.FC = () => {
                     // Send an auto message to company
                     await studentApi.sendMessage({ companyId, content: 'Hello, I just applied to your job posting. Looking forward to hearing from you!' });
                     setToast({ open: true, msg: 'Applied and message sent.', type: 'success' });
+                    setDisabledJobIds(prev => [...new Set([...prev, jobId])]);
                     // Navigate to messages and preselect this company
                     navigate(`/student/messages?companyId=${companyId}`);
-                  } catch (e) {
-                    setToast({ open: true, msg: 'Failed to apply. Please try again.', type: 'error' });
+                  } catch (e: any) {
+                    const msg = e?.message || 'Failed to apply. Please try again.';
+                    setToast({ open: true, msg, type: 'error' });
+                    if (String(msg).toLowerCase().includes('already applied')) {
+                      setDisabledJobIds(prev => [...new Set([...prev, jobId])]);
+                    }
                   } finally {
                     setSubmitting(false);
                   }

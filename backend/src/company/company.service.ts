@@ -77,7 +77,19 @@ export class CompanyService {
         }
       });
 
-      return this.processChartData(applications);
+      // Summary metrics
+      const [totalApplications, pendingReviews, offersExtended, interviewsScheduled] = await Promise.all([
+        this.prisma.application.count({ where: { companyId } }),
+        this.prisma.application.count({ where: { companyId, status: { in: ['APPLIED', 'REVIEWING'] } as any } }),
+        this.prisma.application.count({ where: { companyId, status: 'OFFERED' as any } }),
+        this.prisma.interview.count({ where: { companyId, status: 'SCHEDULED' as any } }),
+      ]);
+
+      const charts = this.processChartData(applications);
+      return {
+        ...charts,
+        summary: { totalApplications, pendingReviews, offersExtended, interviewsScheduled },
+      };
     } catch (error) {
       console.error('Error in getChartData:', error);
       return this.getEmptyChartData();
@@ -219,7 +231,8 @@ export class CompanyService {
             tension: 0.4,
           }
         ]
-      }
+      },
+      summary: { totalApplications: 0, pendingReviews: 0, offersExtended: 0, interviewsScheduled: 0 },
     };
   }
 
@@ -423,7 +436,8 @@ export class CompanyService {
     
     if (upcoming) {
       where.scheduledAt = { gte: new Date() };
-      where.status = 'SCHEDULED';
+      // Show scheduled/confirmed upcoming items (treat SCHEDULED as confirmed)
+      where.status = { in: ['SCHEDULED', 'CONFIRMED'] } as any;
     }
 
     const interviews = await this.prisma.interview.findMany({
@@ -470,6 +484,34 @@ export class CompanyService {
       } as any,
       include: { student: true }
     });
+  }
+
+  // Propose an interview time (status = PENDING until student accepts)
+  async proposeInterview(companyId: string, interviewData: CreateInterviewDto) {
+    const application = await this.prisma.application.findFirst({
+      where: { id: interviewData.applicationId, companyId },
+    });
+    if (!application) throw new Error('Application not found or access denied');
+
+    const interview = await this.prisma.interview.create({
+      data: {
+        title: interviewData.title,
+        description: interviewData.description,
+        scheduledAt: new Date(interviewData.scheduledAt),
+        duration: interviewData.duration,
+        meetingLink: interviewData.meetingLink,
+        studentId: application.studentId,
+        companyId,
+        applicationId: interviewData.applicationId,
+        status: 'PENDING'
+      },
+      include: {
+        student: true,
+        application: { include: { job: true } },
+      },
+    });
+
+    return interview;
   }
 
   async getMessages(companyId: string, studentId?: string) {

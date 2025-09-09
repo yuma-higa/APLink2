@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Container, Typography, TextField, Button, Alert, Avatar, Stack } from '@mui/material';
+import { Box, Container, Typography, TextField, Button, Alert, Avatar, Stack, Autocomplete } from '@mui/material';
+import { MAJORS } from '../../constants/majors';
 import Header from '../../layouts/Header';
 import { useAuth } from '../../hooks/useAuth';
 import { studentApi } from '../../services/studentApi';
@@ -87,7 +88,15 @@ const StudentProfile: React.FC = () => {
             </Stack>
           </Box>
           <TextField fullWidth label="Name" value={form.name || ''} onChange={e => update('name', e.target.value)} />
-          <TextField fullWidth label="Major" value={form.major || ''} onChange={e => update('major', e.target.value)} />
+          <Autocomplete
+            freeSolo
+            options={MAJORS}
+            value={form.major || ''}
+            onInputChange={(_, v) => update('major', v)}
+            renderInput={(params) => (
+              <TextField {...params} label="Major (optional)" placeholder="Start typing to search majors" />
+            )}
+          />
           <TextField fullWidth label="Year" value={form.year || ''} onChange={e => update('year', e.target.value)} />
           <TextField fullWidth label="GPA" type="number" inputProps={{ step: '0.1' }} value={form.gpa ?? ''} onChange={e => update('gpa', parseFloat(e.target.value))} />
           <TextField fullWidth sx={{ gridColumn: '1 / -1' }} label="Skills (comma separated)" value={(form.skills || []).join(', ')} onChange={e => update('skills', e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean))} />

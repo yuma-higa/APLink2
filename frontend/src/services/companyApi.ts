@@ -11,6 +11,7 @@ interface ChartData {
     tension?: number;
   }>;
 }
+interface ChartSummary { totalApplications: number; interviewsScheduled: number; pendingReviews: number; offersExtended: number }
 
 interface Student {
   id: number;
@@ -87,7 +88,7 @@ class CompanyApiService {
     return response.json();
   }
 
-  async getChartData(): Promise<{ applicationData: ChartData; hiringData: ChartData }> {
+  async getChartData(): Promise<{ applicationData: ChartData; hiringData: ChartData; summary: ChartSummary }> {
     try {
       const response = await fetch(`${API_BASE_URL}/company/dashboard/charts`, {
         headers: this.getAuthHeaders()
@@ -125,7 +126,8 @@ class CompanyApiService {
               tension: 0.4,
             }
           ]
-        }
+        },
+        summary: { totalApplications: 0, interviewsScheduled: 0, pendingReviews: 0, offersExtended: 0 }
       };
     }
   }
@@ -190,6 +192,15 @@ class CompanyApiService {
 
   async createInterview(payload: { applicationId: string; title: string; description?: string; scheduledAt: string; duration?: number; meetingLink?: string }) {
     const response = await fetch(`${API_BASE_URL}/company/interviews`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(payload)
+    });
+    return this.handleResponse(response);
+  }
+
+  async proposeInterview(payload: { applicationId: string; title: string; description?: string; scheduledAt: string; duration?: number; meetingLink?: string }) {
+    const response = await fetch(`${API_BASE_URL}/company/interviews/propose`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(payload)
