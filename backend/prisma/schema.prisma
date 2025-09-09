@@ -17,6 +17,11 @@ enum ApplicationStatus {
   HIRED
 }
 
+enum MessageSender {
+  STUDENT
+  COMPANY
+}
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -141,6 +146,7 @@ model Message {
   id String @id @default(auto()) @map("_id") @db.ObjectId
   content String
   isRead Boolean @default(false)
+  sender MessageSender @default(STUDENT)
   
   // Relations
   student Student @relation("StudentMessages", fields: [studentId], references: [id])
@@ -149,7 +155,7 @@ model Message {
   companyId String @db.ObjectId
   
   sentAt DateTime @default(now())
-  
+
   @@map("messages")
 }
 

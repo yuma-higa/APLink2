@@ -6,6 +6,8 @@ import { CreateInterviewDto } from './dto/create-interview.dto';
 import { UpdateApplicationStatusDto } from './dto/update-application-status.dto';
 import { UpdateCompanyProfileDto } from './dto/update-company-profile.dto';
 import { SendMessageDto } from './dto/send-message.dto';
+import { CreateJobDto } from './dto/create-job.dto';
+import { UpdateJobDto } from './dto/update-job.dto';
 
 @Injectable()
 export class CompanyService {
@@ -100,7 +102,12 @@ export class CompanyService {
 
       return applications.map(app => ({
         id: app.id,
+        studentId: app.student?.id,
         studentName: app.student?.name || 'Unknown Student',
+        profileImageUrl: app.student?.profileImageUrl || null,
+        major: app.student?.major || 'Unknown',
+        gpa: app.student?.gpa ?? null,
+        year: app.student?.year || 'Unknown',
         jobTitle: app.job?.title || 'Unknown Position',
         status: app.status,
         appliedAt: app.appliedAt,
@@ -437,18 +444,32 @@ export class CompanyService {
 
   // Messaging
   async sendMessage(companyId: string, messageData: SendMessageDto) {
-    const message = await this.prisma.message.create({
+    // Prevent immediate duplicates (same sender+content within last 5 minutes)
+    const now = new Date();
+    const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    const last = await this.prisma.message.findFirst({
+      where: {
+        companyId,
+        studentId: messageData.studentId,
+        // sender is an enum in schema but may be missing from generated typings; cast object to any
+        sender: 'COMPANY',
+        content: messageData.content,
+        sentAt: { gte: fiveMinAgo }
+      } as any,
+      orderBy: { sentAt: 'desc' },
+      include: { student: true }
+    });
+    if (last) return last;
+
+    return this.prisma.message.create({
       data: {
         companyId,
         studentId: messageData.studentId,
-        content: messageData.content
-      },
-      include: {
-        student: true
-      }
+        content: messageData.content,
+        sender: 'COMPANY'
+      } as any,
+      include: { student: true }
     });
-
-    return message;
   }
 
   async getMessages(companyId: string, studentId?: string) {
@@ -502,6 +523,145 @@ export class CompanyService {
       viewsByDate,
       recentViewers: views.slice(0, 10)
     };
+  }
+
+  // Job postings
+  async listJobs(companyId: string) {
+    return this.prisma.job.findMany({
+      where: { companyId },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async createJob(companyId: string, dto: CreateJobDto) {
+    return this.prisma.job.create({
+      data: {
+        title: dto.title,
+        description: dto.description,
+        requirements: dto.requirements || [],
+        salary: dto.salary,
+        location: dto.location,
+        type: dto.type,
+        isActive: dto.isActive ?? true,
+        companyId
+      }
+    });
+  }
+
+  async updateJob(companyId: string, jobId: string, dto: UpdateJobDto) {
+    // Ensure job belongs to company
+    const job = await this.prisma.job.findFirst({ where: { id: jobId, companyId } });
+    if (!job) throw new Error('Job not found or access denied');
+    return this.prisma.job.update({
+      where: { id: jobId },
+      data: dto
+    });
+  }
+
+  async setJobActive(companyId: string, jobId: string, active: boolean) {
+    const job = await this.prisma.job.findFirst({ where: { id: jobId, companyId } });
+    if (!job) throw new Error('Job not found or access denied');
+    return this.prisma.job.update({ where: { id: jobId }, data: { isActive: active } });
+  }
+
+  async deleteJob(companyId: string, jobId: string) {
+    const job = await this.prisma.job.findFirst({ where: { id: jobId, companyId } });
+    if (!job) throw new Error('Job not found or access denied');
+    await this.prisma.job.delete({ where: { id: jobId } });
+    return { success: true };
+  }
+
+  // Weekly views chart data for last N weeks
+  async getViewsChartData(companyId: string, weeks: number = 8) {
+    const end = new Date();
+    // Align end to start of week (Monday 00:00)
+    const endDay = end.getDay();
+    const diffToMonday = (endDay + 6) % 7; // 0 for Monday
+    end.setHours(0, 0, 0, 0);
+    end.setDate(end.getDate() - diffToMonday + 7); // next Monday 00:00 as exclusive end
+
+    const start = new Date(end);
+    start.setDate(start.getDate() - weeks * 7);
+
+    const views = await this.prisma.profileView.findMany({
+      where: {
+        viewedCompanyId: companyId,
+        viewedAt: { gte: start, lt: end }
+      },
+      select: { viewedAt: true }
+    });
+
+    // Initialize buckets per week
+    const labels: string[] = [];
+    const counts: number[] = new Array(weeks).fill(0);
+    for (let i = weeks - 1; i >= 0; i--) {
+      const weekStart = new Date(end);
+      weekStart.setDate(weekStart.getDate() - (i + 1) * 7);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      labels.push(`${weekStart.getMonth() + 1}/${weekStart.getDate()}–${weekEnd.getMonth() + 1}/${weekEnd.getDate() - 1}`);
+    }
+
+    views.forEach(v => {
+      const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+      const idx = Math.floor((+v.viewedAt - +start) / msPerWeek);
+      if (idx >= 0 && idx < weeks) counts[idx]++;
+    });
+
+    return {
+      labels,
+      datasets: [{
+        label: 'Weekly Visitors',
+        data: counts,
+        borderColor: '#7b1fa2',
+        backgroundColor: 'rgba(123, 31, 162, 0.1)',
+        tension: 0.4,
+      }]
+    };
+  }
+
+  // Students who interacted (applied or messaged) with this company
+  async getInteractiveStudents(companyId: string) {
+    const [apps, messages] = await Promise.all([
+      this.prisma.application.findMany({
+        where: { companyId },
+        include: { student: true },
+      }),
+      this.prisma.message.findMany({
+        where: { companyId },
+        include: { student: true },
+      }),
+    ]);
+
+    const byStudent = new Map<string, any>();
+
+    apps.forEach(app => {
+      const key = app.studentId;
+      const existing = byStudent.get(key) || { student: app.student, applications: [], lastMessageAt: null };
+      existing.applications.push({ id: app.id, status: app.status, appliedAt: app.appliedAt });
+      byStudent.set(key, existing);
+    });
+
+    messages.forEach(msg => {
+      const key = msg.studentId;
+      const existing = byStudent.get(key) || { student: msg.student, applications: [], lastMessageAt: null };
+      if (!existing.lastMessageAt || msg.sentAt > existing.lastMessageAt) existing.lastMessageAt = msg.sentAt;
+      byStudent.set(key, existing);
+    });
+
+    return Array.from(byStudent.values()).map(item => ({
+      id: item.student.id,
+      name: item.student.name,
+      email: item.student.email,
+      major: item.student.major,
+      year: item.student.year,
+      gpa: item.student.gpa,
+      skills: item.student.skills,
+      profileImageUrl: item.student.profileImageUrl,
+      status: item.applications[0]?.status || 'CONTACTED',
+      applications: item.applications,
+      lastMessageAt: item.lastMessageAt,
+    }));
   }
 
   // Company profile management

@@ -1,5 +1,7 @@
 import React from 'react';
-import { Box, Typography, AppBar, Toolbar, Button, Container, Card, CardContent, Grid } from '@mui/material';
+import { Box, Typography, AppBar, Toolbar, Button, Container, Card, CardContent } from '@mui/material';
+// Replaced Grid with simple CSS grid via Box
+import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 const StudentPage: React.FC = () => {
@@ -7,98 +9,105 @@ const StudentPage: React.FC = () => {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
-      {/* ヘッダー */}
+      {/* Header */}
       <AppBar position="static" color="primary">
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            APLink - 学生ダッシュボード
+            APLink - Student Dashboard
           </Typography>
           {user && (
             <Typography variant="body2" sx={{ mr: 2 }}>
-              ようこそ、{user}さん
+              Welcome, {user}
             </Typography>
           )}
           <Button color="inherit" onClick={handleLogout}>
-            ログアウト
+            Logout
           </Button>
         </Toolbar>
       </AppBar>
 
-      {/* メインコンテンツ */}
+      {/* Main */}
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Typography variant="h4" gutterBottom>
-          学生ダッシュボード
+          Student Dashboard
         </Typography>
         
-        <Grid container spacing={3}>
-          {/* 企業検索カード */}
-          <Grid size={{ xs: 12, md: 6 }}>
+        <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+          {/* Company search */}
+          <Box>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  企業を探す
-                </Typography>
+                <Typography variant="h6" gutterBottom>Discover Companies</Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  あなたに合った企業を見つけましょう
+                  Find companies and filter by position, industry, and location.
                 </Typography>
-                <Button variant="contained" color="primary" fullWidth>
-                  企業検索
+                <Button component={RouterLink} to="/student/companies" variant="contained" color="primary" fullWidth>
+                  Browse Companies
                 </Button>
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
 
-          {/* 応募履歴カード */}
-          <Grid size={{ xs: 12, md: 6 }}>
+          {/* Applications */}
+          <Box>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  応募履歴
-                </Typography>
+                <Typography variant="h6" gutterBottom>My Applications</Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  応募した企業の状況を確認できます
+                  Track your status with each company and role.
                 </Typography>
-                <Button variant="contained" color="secondary" fullWidth>
-                  履歴を見る
+                <Button component={RouterLink} to="/student/applications" variant="contained" color="secondary" fullWidth>
+                  View Applications
                 </Button>
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
 
-          {/* プロフィール管理カード */}
-          <Grid size={{ xs: 12, md: 6 }}>
+          {/* Profile */}
+          <Box>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  プロフィール管理
-                </Typography>
+                <Typography variant="h6" gutterBottom>Profile</Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  あなたの情報を更新しましょう
+                  Update your info, skills, LinkedIn, and GitHub.
                 </Typography>
-                <Button variant="outlined" fullWidth>
-                  プロフィール編集
+                <Button component={RouterLink} to="/student/profile" variant="outlined" fullWidth>
+                  Edit Profile
                 </Button>
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
 
-          {/* メッセージカード */}
-          <Grid size={{ xs: 12, md: 6 }}>
+          {/* Messages */}
+          <Box>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  メッセージ
-                </Typography>
+                <Typography variant="h6" gutterBottom>Messages</Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  企業からのメッセージを確認
+                  Chat with recruiters and see unread messages.
                 </Typography>
-                <Button variant="outlined" fullWidth>
-                  メッセージ確認
+                <Button component={RouterLink} to="/student/messages" variant="outlined" fullWidth>
+                  Open Messages
                 </Button>
               </CardContent>
             </Card>
-          </Grid>
-        </Grid>
+          </Box>
+
+          {/* Interviews */}
+          <Box>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>Interviews</Typography>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  Review upcoming and past interviews.
+                </Typography>
+                <Button component={RouterLink} to="/student/interviews" variant="outlined" fullWidth>
+                  View Interviews
+                </Button>
+              </CardContent>
+            </Card>
+          </Box>
+        </Box>
       </Container>
     </Box>
   );

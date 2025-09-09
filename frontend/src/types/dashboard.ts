@@ -10,11 +10,13 @@ export interface ChartData {
 }
 
 export interface Student {
-  id: number;
+  id: number; // application id
+  studentId?: string; // underlying student id (for messaging)
   name: string;
   major: string;
   gpa: string;
   year: string;
   status: 'Applied' | 'Interviewing' | 'Offered' | 'Hired' | 'Rejected';
   appliedDate: string;
+  profileImageUrl?: string;
 }

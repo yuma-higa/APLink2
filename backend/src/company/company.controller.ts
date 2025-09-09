@@ -1,8 +1,11 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, UseGuards, Request, Query, Delete } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { CompanyService } from './company.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateCompanyProfileDto } from './dto/update-company-profile.dto';
+import { FilterStudentsDto } from './dto/filter-students.dto';
+import { CreateJobDto } from './dto/create-job.dto';
+import { UpdateJobDto } from './dto/update-job.dto';
 
 @Controller('company')
 @UseGuards(AuthGuard('jwt'))
@@ -17,6 +20,28 @@ export class CompanyController {
       hasCompanyId: !!req.user.companyId,
       hasStudentId: !!req.user.studentId
     };
+  }
+
+  // Student discovery for direct recruiting
+  @Get('students')
+  async searchStudents(@Request() req, @Query() filters: FilterStudentsDto) {
+    try {
+      let companyId = req.user.companyId;
+
+      // Auto-create company profile if it doesn't exist
+      if (!companyId && req.user.role === 'COMPANY') {
+        companyId = await this.companyService.getOrCreateCompanyProfile(req.user);
+      }
+
+      if (!companyId) {
+        throw new Error('Unable to determine company ID for user');
+      }
+
+      return this.companyService.searchStudents(companyId, filters);
+    } catch (error) {
+      console.error('Error in searchStudents:', error);
+      throw error;
+    }
   }
 
   // Dashboard endpoints
@@ -109,8 +134,60 @@ export class CompanyController {
     @Request() req,
     @Body() body: { studentId: string; content: string }
   ) {
-    const companyId = req.user.companyId;
+    let companyId = req.user.companyId;
+    // Ensure company profile exists and we have an ID, similar to other endpoints
+    if (!companyId && req.user.role === 'COMPANY') {
+      companyId = await this.companyService.getOrCreateCompanyProfile(req.user);
+    }
     return this.companyService.sendMessage(companyId, body);
+  }
+
+  // Interviews
+  @Get('interviews')
+  async getInterviews(@Request() req) {
+    let companyId = req.user.companyId;
+    if (!companyId && req.user.role === 'COMPANY') {
+      companyId = await this.companyService.getOrCreateCompanyProfile(req.user);
+    }
+    return this.companyService.getInterviews(companyId);
+  }
+
+  @Get('interviews/upcoming')
+  async getUpcomingInterviews(@Request() req) {
+    let companyId = req.user.companyId;
+    if (!companyId && req.user.role === 'COMPANY') {
+      companyId = await this.companyService.getOrCreateCompanyProfile(req.user);
+    }
+    return this.companyService.getInterviews(companyId, true);
+  }
+
+  @Post('interviews')
+  async createInterview(@Request() req, @Body() body: { applicationId: string; title: string; description?: string; scheduledAt: string; duration?: number; meetingLink?: string }) {
+    let companyId = req.user.companyId;
+    if (!companyId && req.user.role === 'COMPANY') {
+      companyId = await this.companyService.getOrCreateCompanyProfile(req.user);
+    }
+    return this.companyService.createInterview(companyId, body as any);
+  }
+
+  // Profile views analytics (weekly visitors)
+  @Get('analytics/views')
+  async getViewsAnalytics(@Request() req) {
+    let companyId = req.user.companyId;
+    if (!companyId && req.user.role === 'COMPANY') {
+      companyId = await this.companyService.getOrCreateCompanyProfile(req.user);
+    }
+    return this.companyService.getViewsChartData(companyId, 8);
+  }
+
+  // Interactive students (applied or messaged)
+  @Get('students/interactive')
+  async getInteractiveStudents(@Request() req) {
+    let companyId = req.user.companyId;
+    if (!companyId && req.user.role === 'COMPANY') {
+      companyId = await this.companyService.getOrCreateCompanyProfile(req.user);
+    }
+    return this.companyService.getInteractiveStudents(companyId);
   }
 
   // Profile management
@@ -144,6 +221,52 @@ export class CompanyController {
     } catch (error) {
       console.error('Error in updateProfile:', error);
       throw error;
+  }
+  }
+
+  // Job postings
+  @Get('jobs')
+  async listJobs(@Request() req) {
+    let companyId = req.user.companyId;
+    if (!companyId && req.user.role === 'COMPANY') {
+      companyId = await this.companyService.getOrCreateCompanyProfile(req.user);
     }
+    return this.companyService.listJobs(companyId);
+  }
+
+  @Post('jobs')
+  async createJob(@Request() req, @Body() body: CreateJobDto) {
+    let companyId = req.user.companyId;
+    if (!companyId && req.user.role === 'COMPANY') {
+      companyId = await this.companyService.getOrCreateCompanyProfile(req.user);
+    }
+    return this.companyService.createJob(companyId, body);
+  }
+
+  @Put('jobs/:id')
+  async updateJob(@Request() req, @Param('id') id: string, @Body() body: UpdateJobDto) {
+    let companyId = req.user.companyId;
+    if (!companyId && req.user.role === 'COMPANY') {
+      companyId = await this.companyService.getOrCreateCompanyProfile(req.user);
+    }
+    return this.companyService.updateJob(companyId, id, body);
+  }
+
+  @Put('jobs/:id/active')
+  async setJobActive(@Request() req, @Param('id') id: string, @Body('isActive') isActive: boolean) {
+    let companyId = req.user.companyId;
+    if (!companyId && req.user.role === 'COMPANY') {
+      companyId = await this.companyService.getOrCreateCompanyProfile(req.user);
+    }
+    return this.companyService.setJobActive(companyId, id, !!isActive);
+  }
+
+  @Delete('jobs/:id')
+  async deleteJob(@Request() req, @Param('id') id: string) {
+    let companyId = req.user.companyId;
+    if (!companyId && req.user.role === 'COMPANY') {
+      companyId = await this.companyService.getOrCreateCompanyProfile(req.user);
+    }
+    return this.companyService.deleteJob(companyId, id);
   }
 }

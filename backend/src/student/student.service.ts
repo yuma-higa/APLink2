@@ -245,12 +245,30 @@ export class StudentService {
 
   // Messaging
   async sendMessage(studentId: string, messageData: SendMessageDto) {
+    // Prevent immediate duplicates (same sender+content within last 5 minutes)
+    const now = new Date();
+    const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    const last = await this.prisma.message.findFirst({
+      where: {
+        studentId,
+        companyId: messageData.companyId,
+        // sender exists in schema but typings may miss it; cast
+        sender: 'STUDENT',
+        content: messageData.content,
+        sentAt: { gte: fiveMinAgo }
+      } as any,
+      orderBy: { sentAt: 'desc' },
+      include: { company: true }
+    });
+    if (last) return last;
+
     const message = await this.prisma.message.create({
       data: {
         studentId,
         companyId: messageData.companyId,
-        content: messageData.content
-      },
+        content: messageData.content,
+        sender: 'STUDENT'
+      } as any,
       include: {
         company: true
       }
@@ -277,7 +295,8 @@ export class StudentService {
           }
         }
       },
-      orderBy: { sentAt: 'desc' }
+      // For conversation view (when companyId is provided) we want chronological order bottom-up
+      orderBy: { sentAt: companyId ? 'asc' : 'desc' }
     });
 
     // Group messages by company if no specific company is requested

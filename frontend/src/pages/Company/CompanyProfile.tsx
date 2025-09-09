@@ -1,11 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Container, Typography, Tabs, Tab, CircularProgress, Alert } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Header from "../../layouts/Header";
 import { useAuth } from '../../hooks/useAuth';
 import StatsSection from '../../components/Company/StatsSection';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 import StudentTable from '../../components/Company/StudentTable';
 import ChatSection from '../../components/Company/ChatSection';
+import JobPosting from '../../components/Company/JobPosting';
 import { companyApiService } from '../../services/companyApi';
 import { isAuthenticated } from '../../utils/auth';
 import type { ChartData, Student } from '../../types/dashboard';
@@ -53,6 +66,9 @@ const CompanyProfile: React.FC = () => {
   const [chartData, setChartData] = useState<{ applicationData: ChartData; hiringData: ChartData } | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [viewsData, setViewsData] = useState<ChartData | null>(null);
+  const [chatTarget, setChatTarget] = useState<string | null>(null);
+  const location = useLocation();
   
   // Check authentication on component mount
   useEffect(() => {
@@ -81,15 +97,17 @@ const CompanyProfile: React.FC = () => {
         setError(null);
 
         // Fetch all data in parallel
-        const [chartsData, applicationsData, messagesData] = await Promise.all([
+        const [chartsData, applicationsData, messagesData, viewsChart] = await Promise.all([
           companyApiService.getChartData(),
           companyApiService.getApplications(),
           companyApiService.getMessages(),
+          companyApiService.getViewsAnalytics(),
         ]);
 
         setChartData(chartsData);
         setStudents(applicationsData);
         setMessages(messagesData);
+        setViewsData(viewsChart);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         if (err instanceof Error && err.message === 'Unauthorized') {
@@ -106,16 +124,25 @@ const CompanyProfile: React.FC = () => {
     fetchData();
   }, [currentUser, user, navigate]); // Add dependencies to re-fetch when user changes
 
+  // Read query params for tab and student preselect (from Discover Students)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const qpTab = params.get('tab');
+    const qpStudent = params.get('studentId');
+    if (qpTab === 'messages') setTabValue(2);
+    if (qpStudent) setChatTarget(qpStudent);
+  }, [location.search]);
+
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
-  const handleStatusChange = async (studentId: number, newStatus: Student['status']) => {
+  const handleStatusChange = async (applicationId: number, newStatus: Student['status']) => {
     try {
-      await companyApiService.updateApplicationStatus(studentId, newStatus);
+      await companyApiService.updateApplicationStatus(applicationId, newStatus);
       setStudents(prev => 
         prev.map(student => 
-          student.id === studentId ? { ...student, status: newStatus } : student
+          student.id === applicationId ? { ...student, status: newStatus } : student
         )
       );
     } catch (err) {
@@ -129,28 +156,15 @@ const CompanyProfile: React.FC = () => {
   };
 
   const handleSendEmail = (student: Student) => {
-    console.log('Send email to:', student);
-    // Implement send email logic
-  };
-
-  const handleSendMessage = async (content: string) => {
-    try {
-      // For now, send to first student - in real app, you'd have a selected student
-      if (students.length > 0) {
-        await companyApiService.sendMessage(content, students[0].id.toString());
-        const newMessage = {
-          id: messages.length + 1,
-          sender: 'Company HR',
-          content,
-          timestamp: new Date().toLocaleString(),
-          isRead: true
-        };
-        setMessages(prev => [...prev, newMessage]);
-      }
-    } catch {
-      setError('Failed to send message');
+    if (student.studentId) {
+      setChatTarget(student.studentId);
+      setTabValue(2); // switch to Messages tab
+    } else {
+      setError('No student target found for messaging.');
     }
   };
+
+  // messaging handled inline in ChatSection props to avoid unused vars
 
   const handleMarkAsRead = (messageId: number) => {
     setMessages(prev =>
@@ -190,6 +204,7 @@ const CompanyProfile: React.FC = () => {
             <Tab label="Analytics" />
             <Tab label="Applications" />
             <Tab label="Messages" />
+            <Tab label="Job Posting" />
           </Tabs>
         </Box>
 
@@ -199,6 +214,19 @@ const CompanyProfile: React.FC = () => {
               applicationData={chartData.applicationData} 
               hiringData={chartData.hiringData} 
             />
+          )}
+          {viewsData && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="h6" gutterBottom>Weekly Page Visitors</Typography>
+              <Line data={viewsData} options={{
+                responsive: true,
+                plugins: {
+                  legend: { position: 'top' as const },
+                  title: { display: true, text: 'Last 8 Weeks' }
+                },
+                scales: { y: { beginAtZero: true } }
+              }} />
+            </Box>
           )}
         </TabPanel>
 
@@ -213,10 +241,25 @@ const CompanyProfile: React.FC = () => {
 
         <TabPanel value={tabValue} index={2}>
           <ChatSection
-            messages={messages}
-            onSendMessage={handleSendMessage}
+            messages={messages as any}
+            onSendMessage={async (content, studentId) => {
+              try {
+                await companyApiService.sendMessage(content, studentId);
+                setMessages(prev => [
+                  ...prev,
+                  { id: prev.length + 1, sender: 'Me', content, timestamp: new Date().toLocaleString(), isRead: true, studentId, from: 'COMPANY' }
+                ]);
+              } catch {
+                setError('Failed to send message');
+              }
+            }}
             onMarkAsRead={handleMarkAsRead}
+            initialStudentId={chatTarget || undefined}
           />
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={3}>
+          <JobPosting />
         </TabPanel>
       </Container>
     </Box>

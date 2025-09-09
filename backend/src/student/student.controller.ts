@@ -9,6 +9,11 @@ import {
   UseGuards,
   Request
 } from '@nestjs/common';
+import { UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import * as fs from 'fs';
+import * as path from 'path';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RoleGuard } from '../auth/role.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -35,6 +40,27 @@ export class StudentController {
   async updateProfile(@Request() req, @Body() updateData: UpdateProfileDto) {
     const studentId = await this.studentService.getOrCreateStudentProfile(req.user);
     return this.studentService.updateProfile(studentId, updateData);
+  }
+
+  // Upload profile image and return public URL
+  @Post('profile/image')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const dest = path.join(process.cwd(), 'uploads', 'profile');
+        fs.mkdirSync(dest, { recursive: true });
+        cb(null, dest);
+      },
+      filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname) || '.jpg';
+        const name = `student_${Date.now()}${ext}`;
+        cb(null, name);
+      }
+    })
+  }))
+  async uploadProfileImage(@UploadedFile() file: Express.Multer.File) {
+    const url = `/uploads/profile/${file.filename}`;
+    return { url };
   }
 
   // Dashboard
